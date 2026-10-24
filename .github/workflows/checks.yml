@@ -1,0 +1,95 @@
+name: Checks
+
+# Reusable: the full test gate. Called by CI (every push and pull request) and by Windows Release (before an installer is
+# built), so an installer is never produced from code that has not passed exactly these checks.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  ELECTRON_DISABLE_SECURITY_WARNINGS: '1'
+
+jobs:
+  ubuntu:
+    name: Typecheck, lint, unit and e2e tests (Ubuntu)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Electron system libraries
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgbm1 libnss3 libasound2t64 libgtk-3-0t64 libxss1 libxtst6
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test:unit
+      - run: pnpm check:integrity
+      - name: Build app bundles
+        run: pnpm build
+      - name: End-to-end tests (Playwright driving the real Electron app under xvfb)
+        timeout-minutes: 20
+        run: xvfb-run -a pnpm exec playwright test
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-ubuntu
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  windows:
+    name: End-to-end tests (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build app bundles
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm build 2>&1 | tee build.log
+      - name: End-to-end tests (Playwright driving the real Electron app on Windows)
+        timeout-minutes: 30
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm exec playwright test 2>&1 | tee e2e.log
+      - name: Show the end of the logs as annotations if a step failed
+        if: failure()
+        shell: pwsh
+        run: |
+          foreach ($f in 'build.log', 'e2e.log') {
+            if (-not (Test-Path $f)) { continue }
+            $noise = 'ExperimentalWarning|trace-warnings|^\s*$|dist/assets|rolldown|chunks are larger'
+            $lines = Get-Content $f | Where-Object { $_ -notmatch $noise } | ForEach-Object { if ($_.Length -gt 220) { $_.Substring(0, 220) } else { $_ } }
+            $text = ($lines -join "`n"); if ($text.Length -gt 14000) { $text = $text.Substring($text.Length - 14000) }
+            $n = [math]::Ceiling($text.Length / 3700); if ($n -lt 1) { $n = 1 }
+            for ($i = 0; $i -lt $n; $i++) {
+              $len = [math]::Min(3700, $text.Length - $i * 3700)
+              $c = $text.Substring($i * 3700, $len).Replace('%', '%25').Replace("`r", '').Replace("`n", '%0A')
+              Write-Host "::error title=$f $($i + 1)/$n::$c"
+            }
+          }
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-windows
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

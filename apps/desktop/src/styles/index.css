@@ -1,0 +1,44 @@
+@import 'tailwindcss';
+@import './fonts.css';
+@import './tokens.css';
+@import './components.css';
+@import './login.css';
+
+@theme inline {
+  --color-red: var(--red);
+  --color-brand: var(--brand);
+  --color-accent: var(--accent);
+  --color-gold: var(--gold);
+  --color-black: var(--black);
+  --color-cream: var(--cream);
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-num);
+}
+
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: var(--cream);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--fs-md);
+  line-height: var(--lh-body);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+/* never fake a bold or an italic: Tiro Bangla has Regular only and Nunito stops at 600 */
+html { font-synthesis: none; }
+strong, b, th, optgroup { font-weight: var(--fw-strong); }
+/* Bangla has no bold; emphasis is carried by ink colour and a touch of spacing instead */
+html[lang='bn'] .main :is(strong, b), html[lang='bn'] .p-modal :is(strong, b), html[lang='bn'] .p-drawer :is(strong, b) { color: var(--ink); letter-spacing: .01em; }
+* { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+::selection { background: var(--accent); color: var(--brand); }
+h1, h2, h3, h4 { margin: 0; font-weight: var(--fw-strong); letter-spacing: var(--track-head); line-height: var(--lh-tight); }
+/* big headings, the brand and hero figures: the same soft face, larger, never heavier */
+.page-h h2, .topbar h1, .display, .p-stat-value, .brand-name, .center-screen h1 { font-family: var(--font-display); letter-spacing: var(--track-head); }
+/* figures line up: numbers, money and quantity inputs use tabular digits in the number face */
+.num, .p-input.num, .totals .num, td.right { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.num { text-align: right; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

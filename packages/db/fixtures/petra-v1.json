@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "counts": {
+    "products": 2,
+    "customers": 2,
+    "suppliers": 1,
+    "sales": 2,
+    "purchases": 1,
+    "expenses": 1,
+    "users": 3
+  },
+  "customerBalances": [
+    {
+      "name": "Karim Store",
+      "balance": 775000
+    },
+    {
+      "name": "Rahim Mart",
+      "balance": 0
+    }
+  ],
+  "stock": [
+    {
+      "sku": "MLK",
+      "stock_qty": 90
+    },
+    {
+      "sku": "TEA",
+      "stock_qty": 43
+    }
+  ]
+}

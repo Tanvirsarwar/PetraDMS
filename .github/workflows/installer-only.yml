@@ -1,0 +1,48 @@
+name: Windows Installer (quick, no tests)
+
+# GitHub, Actions, "Windows Installer (quick, no tests)", Run workflow.
+# Builds PetraDMS-Setup-<version>.exe and nothing else: no tests and no install check. It exists as a safety net so that an
+# installer can always be produced from the code. Use "Windows Release" (the full gate) for anything you give a customer;
+# use this one only to get a build quickly, then test the installer by hand before it goes out.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  installer:
+    name: Build the Windows x64 installer
+    runs-on: windows-latest
+    timeout-minutes: 40
+    env:
+      ELECTRON_DISABLE_SECURITY_WARNINGS: '1'
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build the installer
+        run: pnpm dist:win
+      - name: Checksum
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem apps/desktop/release/PetraDMS-Setup-*.exe | Select-Object -First 1
+          if (-not $exe) { throw 'installer was not produced' }
+          New-Item -ItemType Directory -Force -Path out | Out-Null
+          Copy-Item $exe.FullName out/
+          $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
+          "$hash  $($exe.Name)" | Out-File -Encoding ascii out/SHA256SUMS.txt
+          Get-Content out/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PetraDMS-Windows-x64-quick
+          path: |
+            out/PetraDMS-Setup-*.exe
+            out/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,45 @@
+{
+  "name": "petra-dms",
+  "version": "1.2.1",
+  "private": true,
+  "type": "module",
+  "description": "PetraDMS - offline Windows distribution management system",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @petra/desktop dev",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "eslint .",
+    "test:core": "vitest run --project core --project db",
+    "test:unit": "vitest run",
+    "check:integrity": "tsx tools/check-integrity/index.ts --self-test",
+    "seed:perf": "tsx tools/seed/perf.ts",
+    "build": "pnpm --filter @petra/desktop build",
+    "test:e2e": "pnpm --filter @petra/desktop build && playwright test",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test:unit && pnpm check:integrity && pnpm test:e2e",
+    "dist:win": "pnpm --filter @petra/desktop dist:win",
+    "dist:dir": "pnpm --filter @petra/desktop dist:dir",
+    "verify:package": "tsx tools/verify-release.ts",
+    "verify:release": "pnpm verify && pnpm verify:package"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "@playwright/test": "1.63.0",
+    "@types/node": "24.19.1",
+    "eslint": "^9.39.0",
+    "fast-check": "4.10.2",
+    "globals": "^16.0.0",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.71.1",
+    "vitest": "5.0.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild"
+    ]
+  }
+}

@@ -1,0 +1,57 @@
+name: Windows Release
+
+# GitHub, Actions, Windows Release, Run workflow  ->  tests, builds and verifies the installer and uploads the artifact
+# "PetraDMS-Windows-x64" (PetraDMS-Setup-<version>.exe, SHA256SUMS.txt, VERSION.txt, RELEASE-NOTES.md).
+#
+# Pushing a version tag also publishes a GitHub Release with the same files:
+#   git tag vX.Y.Z && git push origin vX.Y.Z
+# The tag must equal the version in apps/desktop/package.json.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    name: Check version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag must equal the app version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(node -p "require('./apps/desktop/package.json').version")
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::Tag v$tag does not match apps/desktop/package.json version $version. Change the version, commit, and tag again."
+            exit 1
+          fi
+          grep -q "^## \[$version\]" CHANGELOG.md || { echo "::error::CHANGELOG.md has no section for $version"; exit 1; }
+  checks:
+    name: Checks
+    needs: version
+    uses: ./.github/workflows/checks.yml
+  windows:
+    name: Windows
+    needs: checks
+    uses: ./.github/workflows/windows-build.yml
+    secrets: inherit
+  publish:
+    name: Publish GitHub Release
+    needs: windows
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: PetraDMS-Windows-x64
+          path: out
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" out/PetraDMS-Setup-*.exe out/SHA256SUMS.txt out/VERSION.txt \
+            --repo "$GITHUB_REPOSITORY" --title "PetraDMS $GITHUB_REF_NAME" --notes-file out/RELEASE-NOTES.md

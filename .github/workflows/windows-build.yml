@@ -1,0 +1,117 @@
+name: Windows build
+
+# Reusable: builds the Windows x64 installer, proves it works (install, first run, upgrade, offline, uninstall), and
+# uploads it as the artifact "PetraDMS-Windows-x64". Called by CI and by Windows Release.
+#
+# Code signing is optional. Add the repository secrets WINDOWS_CSC_LINK (the .pfx certificate, base64) and
+# WINDOWS_CSC_PASSWORD and this job signs the installer and the program and then requires the signature to be valid.
+# Without them the installer is unsigned and says so in VERSION.txt. Nothing is ever signed with a made-up certificate.
+on:
+  workflow_call:
+    outputs:
+      version:
+        description: Version of the installer that was built
+        value: ${{ jobs.windows.outputs.version }}
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Build and verify Windows x64 installer (NSIS)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    env:
+      ELECTRON_DISABLE_SECURITY_WARNINGS: '1'
+      HAS_CSC: ${{ secrets.WINDOWS_CSC_LINK != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Signing configuration
+        shell: pwsh
+        env:
+          CSC_LINK_SECRET: ${{ secrets.WINDOWS_CSC_LINK }}
+          CSC_PASSWORD_SECRET: ${{ secrets.WINDOWS_CSC_PASSWORD }}
+        run: |
+          if ($env:HAS_CSC -eq 'true') {
+            "CSC_LINK=$env:CSC_LINK_SECRET" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+            "CSC_KEY_PASSWORD=$env:CSC_PASSWORD_SECRET" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+            "PETRA_EXPECT_SIGNED=1" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+            Write-Host 'Code signing certificate found: the installer will be signed and the signature verified.'
+          } else {
+            "CSC_IDENTITY_AUTO_DISCOVERY=false" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+            Write-Host 'No signing certificate configured: the installer will be unsigned (Windows SmartScreen will warn).'
+          }
+      - name: Build the installer and verify it (install, metadata, first run, upgrade, offline, uninstall)
+        shell: bash
+        run: |
+          set -o pipefail
+          pnpm verify:package 2>&1 | tee verify.log
+      - name: Show the end of the log as annotations if the build failed
+        if: failure()
+        shell: pwsh
+        run: |
+          if (-not (Test-Path verify.log)) { exit 0 }
+          $noise = 'ExperimentalWarning|trace-warnings|^\s*$|dist/assets|rolldown|chunks are larger'
+          $lines = Get-Content verify.log | Where-Object { $_ -notmatch $noise } | ForEach-Object { if ($_.Length -gt 220) { $_.Substring(0, 220) } else { $_ } }
+          $text = ($lines -join "`n"); if ($text.Length -gt 30000) { $text = $text.Substring($text.Length - 30000) }
+          $n = [math]::Ceiling($text.Length / 3700); if ($n -lt 1) { $n = 1 }
+          for ($i = 0; $i -lt $n; $i++) {
+            $len = [math]::Min(3700, $text.Length - $i * 3700)
+            $c = $text.Substring($i * 3700, $len).Replace('%', '%25').Replace("`r", '').Replace("`n", '%0A')
+            Write-Host "::error title=windows build log $($i + 1)/$n::$c"
+          }
+      - name: Collect release files
+        id: meta
+        shell: pwsh
+        run: |
+          $version = (Get-Content apps/desktop/package.json -Raw | ConvertFrom-Json).version
+          $exe = Get-Item "apps/desktop/release/PetraDMS-Setup-$version.exe"
+          New-Item -ItemType Directory -Force -Path out | Out-Null
+          Copy-Item $exe.FullName out/
+          $hash = (Get-FileHash $exe.FullName -Algorithm SHA256).Hash.ToLower()
+          "$hash  $($exe.Name)" | Out-File -Encoding ascii out/SHA256SUMS.txt
+          $sig = (Get-AuthenticodeSignature $exe.FullName).Status
+          @(
+            "PetraDMS $version",
+            "Installer : $($exe.Name) ($([math]::Round($exe.Length / 1MB, 1)) MB)",
+            "SHA-256   : $hash",
+            "Signature : $sig",
+            "Commit    : $env:GITHUB_SHA",
+            "Built     : $((Get-Date).ToUniversalTime().ToString('yyyy-MM-dd HH:mm')) UTC",
+            "Run       : $env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID",
+            "Platform  : Windows 10/11 64-bit, per-user install, works offline"
+          ) | Out-File -Encoding utf8 out/VERSION.txt
+          # release notes: the CHANGELOG section for this version
+          $log = Get-Content CHANGELOG.md -Raw
+          $m = [regex]::Match($log, "(?ms)^## \[$([regex]::Escape($version))\][^\r\n]*\r?\n(.*?)(?=^## \[|\z)")
+          $notes = if ($m.Success) { $m.Groups[1].Value.Trim() } else { "PetraDMS $version" }
+          $notes + "`n`nInstall: see docs/INSTALL.md. The installer is " + $(if ($sig -eq 'Valid') { 'digitally signed.' } else { 'not code-signed, so Windows SmartScreen may warn: choose More info, then Run anyway.' }) | Out-File -Encoding utf8 out/RELEASE-NOTES.md
+          "version=$version" | Out-File -Append -Encoding utf8 $env:GITHUB_OUTPUT
+          Get-Content out/VERSION.txt
+      - name: Fail unless the real installer exists, and report its path and size
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem "out/PetraDMS-Setup-*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $exe -or $exe.Length -lt 20MB) { throw 'The Windows installer (PetraDMS-Setup-<version>.exe) was not produced, or is far too small.' }
+          $line = "Installer: $($exe.FullName) ($([math]::Round($exe.Length / 1MB, 1)) MB)"
+          Write-Host $line
+          @("## PetraDMS Windows installer", "", $line, "", "Artifact: **PetraDMS-Windows-x64** (download from this run's Artifacts; unzip, then run PetraDMS-Setup-*.exe)", "", '```', (Get-Content out/VERSION.txt -Raw), '```') | Out-File -Append -Encoding utf8 $env:GITHUB_STEP_SUMMARY
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PetraDMS-Windows-x64
+          path: |
+            out/PetraDMS-Setup-*.exe
+            out/SHA256SUMS.txt
+            out/VERSION.txt
+            out/RELEASE-NOTES.md
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,30 @@
+node_modules/
+dist/
+dist-electron/
+release/
+out/
+test-results/
+playwright-report/
+*.log
+.DS_Store
+*.db
+*.db-wal
+*.db-shm
+.env
+
+# the released-schema fixtures are real data files, kept on purpose
+!packages/db/fixtures/*.db
+
+# performance datasets made by pnpm seed:perf
+.perf-data/
+
+# secrets: never commit signing keys, certificates or issued licences
+*.pem
+*.pfx
+*.p12
+*.key
+keys/
+licence.petra
+*.petra
+.env*
+release-upgrade/

@@ -1,0 +1,15 @@
+{
+  "name": "@petra/db",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@petra/core": "workspace:*",
+    "jsbarcode": "3.12.3",
+    "zod": "4.6.5"
+  }
+}

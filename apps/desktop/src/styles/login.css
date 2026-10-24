@@ -1,0 +1,138 @@
+/* ===== Sign-in screen (v1.2.0): PETRA midnight glass =====
+   Local only: no image requests, no web fonts. The panel is frosted glass over a navy backdrop of flowing
+   translucent ribbons (Scene3D). Every colour pair below is >= 4.5:1 (the essential text is >= 7:1).
+   Layout never depends on the window size: the screen scrolls inside itself if a window is shorter than the panel. */
+
+.center-screen.login-screen {
+  --lg-text: #E8F2FF;
+  --lg-muted: #A9BFDB;
+  --lg-line: rgba(125, 211, 252, .30);
+  --lg-cyan: #22D3EE;
+  --lg-teal: #14B8A6;
+  --lg-navy: #04122B;
+  --lg-focus: #67E8F9;
+  position: relative; isolation: isolate;
+  display: flex; flex-direction: column;
+  height: 100%; min-height: 0; padding: var(--sp-5);
+  overflow-x: hidden; overflow-y: auto;
+  background: #030918;
+}
+
+/* ---- backdrop ---- */
+.scene3d { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  background:
+    radial-gradient(75% 65% at 12% 8%, rgba(29, 78, 216, .42) 0%, transparent 60%),
+    radial-gradient(70% 60% at 92% 96%, rgba(8, 145, 178, .34) 0%, transparent 60%),
+    linear-gradient(160deg, #030918 0%, #061330 52%, #020712 100%); }
+.s3-glow { position: absolute; border-radius: 50%; }
+.s3-glow.a { width: 52vmax; height: 52vmax; left: -18vmax; top: -22vmax; background: radial-gradient(circle, rgba(37, 99, 235, .38), transparent 66%); }
+.s3-glow.b { width: 46vmax; height: 46vmax; right: -16vmax; bottom: -20vmax; background: radial-gradient(circle, rgba(34, 211, 238, .30), transparent 66%); }
+.s3-glow.c { width: 30vmax; height: 30vmax; left: 38%; top: 55%; background: radial-gradient(circle, rgba(45, 212, 191, .16), transparent 66%); }
+.s3-art { position: absolute; inset: 0; width: 100%; height: 100%; }
+.s3-ribbon { transform-box: fill-box; transform-origin: center; will-change: transform; }
+.s3-ribbon.r1 { animation: s3-sway-a 46s ease-in-out infinite alternate; }
+.s3-ribbon.r2 { animation: s3-sway-b 58s ease-in-out infinite alternate; }
+.s3-ribbon.r3 { animation: s3-sway-a 70s ease-in-out infinite alternate-reverse; }
+@keyframes s3-sway-a { from { transform: translate3d(-18px, 8px, 0) rotate(-.6deg); } to { transform: translate3d(22px, -12px, 0) rotate(.7deg); } }
+@keyframes s3-sway-b { from { transform: translate3d(16px, -6px, 0) rotate(.5deg); } to { transform: translate3d(-24px, 10px, 0) rotate(-.6deg); } }
+.s3-vignette { position: absolute; inset: 0; background: radial-gradient(120% 100% at 50% 45%, transparent 55%, rgba(2, 6, 20, .55) 100%); }
+
+/* ---- the panel ---- */
+.login-glass {
+  position: relative; z-index: 1; margin: auto; flex: none;
+  width: min(440px, 100%); padding: 18px 28px 18px;
+  display: flex; flex-direction: column; gap: var(--sp-3);
+  color: var(--lg-text);
+  border: 1px solid var(--lg-line); border-radius: 26px;
+  background: linear-gradient(160deg, rgba(16, 34, 74, .66) 0%, rgba(7, 18, 44, .78) 100%);
+  box-shadow: 0 34px 80px -24px rgba(0, 0, 0, .7), 0 0 70px -26px rgba(34, 211, 238, .5), inset 0 1px 0 rgba(255, 255, 255, .12), inset 0 0 0 1px rgba(34, 211, 238, .05);
+  -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .login-glass { background: linear-gradient(160deg, #10224a 0%, #07122c 100%); }
+}
+/* the language switch sits in the screen's corner, outside the panel: always visible, and it costs the panel no height */
+.login-top { position: fixed; top: 14px; right: 18px; z-index: 2; }
+.login-logo { display: block; width: min(300px, 78%); height: auto; margin: 0 auto; border-radius: 22px; box-shadow: 0 14px 34px -14px rgba(0, 0, 0, .6), 0 0 0 1px rgba(255, 255, 255, .06); user-select: none; -webkit-user-drag: none; }
+.login-glass .trader { justify-content: center; text-align: center; }
+.login-glass .trader-name { color: #fff; font-size: var(--fs-lg); text-align: center; }
+.login-glass .trader-logo { background: #fff; }
+.login-glass .trader-sub { color: var(--lg-muted); opacity: 1; }
+.login-title { margin: 2px 0 0; text-align: center; font-size: var(--fs-xl); font-weight: var(--fw-strong); color: #fff; overflow-wrap: anywhere; }
+.login-hint { margin: 0; text-align: center; color: var(--lg-muted); }
+.login-body { display: grid; gap: var(--sp-3); min-width: 0; }
+.login-actions { display: flex; align-items: center; gap: var(--sp-2); }
+.login-actions .spacer { flex: 1; }
+
+/* ---- controls on glass ---- */
+:is(.login-glass, .login-top) .p-seg { background: rgba(4, 12, 32, .55); border-color: var(--lg-line); box-shadow: none; }
+:is(.login-glass, .login-top) .p-seg button { color: #C5D7EF; }
+:is(.login-glass, .login-top) .p-seg button:hover { color: #fff; }
+:is(.login-glass, .login-top) .p-seg button[aria-pressed='true'] { background: linear-gradient(135deg, rgba(34, 211, 238, .30), rgba(20, 184, 166, .30)); color: #fff; box-shadow: inset 0 0 0 1px rgba(103, 232, 249, .55); }
+:is(.login-glass, .login-top) .p-seg button:focus-visible { outline: 2px solid var(--lg-focus); outline-offset: 1px; }
+
+.login-glass .p-btn { background: rgba(255, 255, 255, .07); border-color: rgba(147, 197, 253, .30); color: var(--lg-text); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08); }
+.login-glass .p-btn:hover:not(:disabled) { background: rgba(34, 211, 238, .16); border-color: rgba(103, 232, 249, .65); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .10), 0 6px 18px -10px rgba(34, 211, 238, .8); }
+.login-glass .p-btn:active:not(:disabled) { background: rgba(34, 211, 238, .24); box-shadow: inset 0 2px 5px rgba(0, 0, 0, .35); }
+.login-glass .p-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px #061330, 0 0 0 4px var(--lg-focus); }
+.login-glass .p-btn:disabled { opacity: .42; }
+.login-glass .p-btn.primary { background: linear-gradient(135deg, var(--lg-cyan) 0%, var(--lg-teal) 100%); border-color: transparent; color: var(--lg-navy); box-shadow: 0 10px 24px -10px rgba(34, 211, 238, .75), inset 0 1px 0 rgba(255, 255, 255, .35); }
+.login-glass .p-btn.primary:hover:not(:disabled) { background: linear-gradient(135deg, #5EEAD4 0%, #22D3EE 100%); border-color: transparent; box-shadow: 0 12px 28px -10px rgba(34, 211, 238, .95), inset 0 1px 0 rgba(255, 255, 255, .4); }
+.login-glass .p-btn.primary:active:not(:disabled) { background: linear-gradient(135deg, #14B8A6 0%, #0EA5E9 100%); box-shadow: inset 0 2px 5px rgba(0, 0, 0, .3); }
+.login-glass .p-btn.primary:focus-visible { box-shadow: 0 0 0 2px #061330, 0 0 0 4px var(--lg-focus); }
+.login-glass .p-btn.ghost { background: transparent; border-color: transparent; box-shadow: none; color: #BBE3F5; }
+.login-glass .p-btn.ghost:hover:not(:disabled) { background: rgba(255, 255, 255, .08); color: #fff; box-shadow: none; }
+
+.login-glass .p-label { color: #C5D7EF; }
+.login-glass .p-input { background: rgba(3, 10, 28, .6); border-color: rgba(147, 197, 253, .34); color: #fff; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35); }
+.login-glass .p-input:hover { border-color: rgba(147, 197, 253, .6); }
+.login-glass .p-input:focus { background: rgba(3, 10, 28, .78); border-color: var(--lg-cyan); box-shadow: 0 0 0 3px rgba(34, 211, 238, .30); }
+.login-glass .p-error { padding: 8px 12px; border: 1px solid rgba(252, 165, 165, .45); border-radius: var(--r-2); background: rgba(185, 28, 28, .22); color: #FFE1E1; font-size: var(--fs-sm); line-height: 1.4; overflow-wrap: anywhere; }
+
+.login-glass .keypad { max-width: 272px; width: 100%; }
+.login-glass .keypad .p-btn { height: 50px; font-size: var(--fs-xl); border-radius: 14px; }
+.login-glass .pin-dots span { border-color: #67E8F9; }
+.login-glass .pin-dots span.on { background: linear-gradient(135deg, var(--lg-cyan), var(--lg-teal)); border-color: transparent; box-shadow: 0 0 12px rgba(34, 211, 238, .7); }
+
+.login-glass .user-tile { background: rgba(255, 255, 255, .06); border-color: rgba(147, 197, 253, .26); color: var(--lg-text); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .07); min-width: 0; }
+.login-glass .user-tile:hover { background: rgba(34, 211, 238, .14); border-color: rgba(103, 232, 249, .6); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 8px 22px -12px rgba(34, 211, 238, .8); }
+.login-glass .user-tile:focus-visible { outline: none; box-shadow: 0 0 0 2px #061330, 0 0 0 4px var(--lg-focus); }
+.login-glass .user-tile .avatar { background: linear-gradient(135deg, var(--lg-cyan), var(--lg-teal)); color: var(--lg-navy); }
+.login-glass .user-tile > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.login-glass .user-tile strong { color: #fff; }
+.login-glass .user-tile small { color: var(--lg-muted); }
+
+.login-glass .powered { text-align: center; margin-top: var(--sp-1); padding-top: var(--sp-3); border-top: 1px solid rgba(147, 197, 253, .16); color: var(--lg-muted); opacity: 1; }
+.login-glass .powered strong { color: #fff; opacity: 1; }
+.login-glass .powered-maker { opacity: 1; }
+
+/* ---- short windows (the app's minimum is 1024 x 640): the panel shrinks in steps and, below that, scrolls ---- */
+@media (max-height: 860px) {
+  .center-screen.login-screen { padding: var(--sp-3); }
+  .login-glass { padding: 14px 26px; gap: var(--sp-2); }
+  .login-logo { width: min(250px, 66%); border-radius: 18px; }
+  .login-glass .keypad .p-btn { height: 45px; }
+  .login-glass .trader-logo, .login-glass .trader-mono { width: 34px; height: 34px; }
+  .login-glass .powered { padding-top: var(--sp-2); }
+}
+@media (max-height: 700px) {
+  .login-logo { width: min(190px, 52%); border-radius: 14px; }
+  .login-glass .keypad .p-btn { height: 38px; font-size: var(--fs-lg); }
+  .login-glass .trader-logo, .login-glass .trader-mono { width: 28px; height: 28px; }
+  .login-title { font-size: var(--fs-lg); }
+  .login-hint { display: none; }
+  .login-glass { gap: 6px; padding-top: 12px; padding-bottom: 10px; }
+}
+@media (max-width: 440px) { .login-glass { padding-left: 18px; padding-right: 18px; } }
+
+/* ---- motion and capability safeguards ---- */
+html[data-motion='reduced'] .scene3d *, html[data-motion='off'] .scene3d * { animation: none !important; }
+@media (prefers-reduced-motion: reduce) { .scene3d * { animation: none !important; } }
+/* a slow GPU (Lite): no blur layer, a plainer, more opaque panel, fewer ribbons */
+html[data-lite='1'] .login-glass { -webkit-backdrop-filter: none; backdrop-filter: none; background: linear-gradient(160deg, #10224a 0%, #07122c 100%); }
+html[data-lite='1'] .s3-ribbon.r3, html[data-lite='1'] .s3-glow.c { display: none; }
+/* High contrast: plain panel, no scene */
+html[data-contrast='high'] .scene3d { display: none; }
+html[data-contrast='high'] .center-screen.login-screen { background: #000; }
+html[data-contrast='high'] .login-glass { background: #000; -webkit-backdrop-filter: none; backdrop-filter: none; border: 2px solid #fff; box-shadow: none; }
+html[data-contrast='high'] .login-glass .p-input, html[data-contrast='high'] .login-glass .p-btn { border-color: #fff; }

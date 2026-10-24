@@ -1,0 +1,54 @@
+appId: com.petra.dms
+productName: PetraDMS
+copyright: Copyright © 2026 Petra
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+electronLanguages: [en-US]
+forceCodeSigning: false
+compression: normal
+directories:
+  output: release
+  buildResources: build
+asar: true
+# Everything the main process needs is bundled by esbuild into dist-electron,
+# and the renderer is bundled by Vite into dist. No node_modules are shipped.
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - package.json
+  - "!**/*.map"
+extraResources:
+  - from: ../../packages/db/migrations
+    to: migrations
+    filter: ["**/*.sql"]
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  # PetraDMS-Setup-<version>.exe (Windows 10/11 64-bit only, so the architecture is not repeated in the name)
+  artifactName: PetraDMS-Setup-${version}.${ext}
+  requestedExecutionLevel: asInvoker
+  # No certificate yet (plan 18): the installer is unsigned and Windows SmartScreen will warn. Signing is switched on by
+  # setting CSC_LINK and CSC_KEY_PASSWORD in the repository secrets; nothing here needs to change.
+  signAndEditExecutable: true
+nsis:
+  oneClick: false
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: PetraDMS
+  deleteAppDataOnUninstall: false
+  runAfterFinish: true
+  uninstallDisplayName: PetraDMS
+  # Tells the person, when they uninstall by hand, that their business data is deliberately left in place.
+  include: build/installer.nsh
+linux:
+  # Linux builds exist only so CI and the release check can start the packaged app without Windows; they are not a product.
+  target: dir
+  icon: build/icon.png
+  category: Office
+  executableName: PetraDMS

@@ -1,0 +1,45 @@
+{
+  "name": "@petra/desktop",
+  "productName": "PetraDMS",
+  "version": "1.2.1",
+  "private": true,
+  "description": "PetraDMS - offline distribution management for FMCG distributors",
+  "author": "Petra",
+  "main": "dist-electron/main.cjs",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build:renderer": "vite build",
+    "build:electron": "node scripts/build-electron.mjs",
+    "build": "pnpm build:renderer && pnpm build:electron",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.electron.json",
+    "dist:win": "pnpm build && electron-builder --config electron-builder.yml --win nsis --x64 --publish never",
+    "dist:dir": "pnpm build && electron-builder --config electron-builder.yml --dir --publish never"
+  },
+  "devDependencies": {
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/noto-serif-bengali": "^5.3.0",
+    "@petra/core": "workspace:*",
+    "@petra/db": "workspace:*",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "electron": "44.5.1",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.28.2",
+    "exceljs": "4.4.0",
+    "jsbarcode": "3.12.3",
+    "motion": "14.0.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router-dom": "7.18.4",
+    "tailwindcss": "4.3.3",
+    "vite": "8.3.3",
+    "zod": "4.6.5",
+    "zustand": "5.0.15"
+  },
+  "dependencies": {
+    "@fontsource/nunito": "^5.3.0",
+    "@fontsource/tiro-bangla": "^5.3.0"
+  }
+}

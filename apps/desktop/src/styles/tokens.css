@@ -1,0 +1,152 @@
+/* Design tokens (plan section 9). v1.1.2 palette: Deep Navy #0F172A (primary), Teal #14B8A6 and Gold #D4AF37 (accents),
+   Light Gray #F1F5F9 (background). Names kept from earlier versions so no rule had to move: --black is now the navy,
+   --cream the light gray, --paper white. --red is NOT a brand colour any more: it means danger and nothing else
+   (errors, delete, money owed). Teal marks what is interactive or selected, gold marks highlights. Light text on teal or
+   gold is too faint (about 2.4:1), so those fills carry navy text; teal used as text or as a switch uses --accent-dark. */
+:root {
+  /* colour */
+  --brand: #0F172A;
+  --brand-dark: #020617;
+  --accent: #14B8A6;
+  --accent-dark: #0F766E;
+  --accent-tint: #D5F3EF;
+  --gold: #D4AF37;
+  --gold-tint: #F6EBC6;
+  --red: #C8202F;
+  --red-dark: #A21A27;
+  --red-tint: #F4DCDD;
+  --black: #0F172A;
+  --ink: #0F172A;
+  --ink-2: #334155;
+  --muted: #566579;
+  --cream: #F1F5F9;
+  --cream-2: #E5EAF1;
+  --cream-3: #D3DBE6;
+  --paper: #FFFFFF;
+  --line: #CBD5E1;
+  --line-strong: #75839A;
+  --ok: #2E6B43;
+  --ok-tint: #DCEFE3;
+  --warn: #8A6410;
+  --warn-tint: #F8EDC9;
+  --focus: #0F172A;
+
+  /* spacing (4 px base) */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px;
+
+  /* radius (v1.1.1): soft corners, still businesslike */
+  --r-1: 4px; --r-2: 8px; --r-3: 12px; --r-4: 16px; --r-5: 22px; --r-pill: 999px;
+
+  /* type scale; the font-size setting multiplies --fs-scale */
+  --fs-scale: 1;
+  --fs-xs: calc(11px * var(--fs-scale));
+  --fs-sm: calc(12.5px * var(--fs-scale));
+  --fs-md: calc(14px * var(--fs-scale));
+  --fs-lg: calc(16px * var(--fs-scale));
+  --fs-xl: calc(20px * var(--fs-scale));
+  --fs-2xl: calc(26px * var(--fs-scale));
+  --fs-3xl: calc(34px * var(--fs-scale));
+  --fs-hero: calc(30px * var(--fs-scale));
+
+  /* type families (v1.1.1, D23). Each bundled face covers one script, so a mixed line picks the right one: Latin in
+     Nunito, Bangla in Tiro Bangla, any glyph Tiro lacks from Noto Serif Bengali, then Windows' own Nirmala UI. */
+  --font-bn: 'Tiro Bangla', 'Noto Serif Bengali', 'Nirmala UI';
+  --font-ui: 'Nunito', var(--font-bn), system-ui, 'Segoe UI', sans-serif;
+  /* headings, the brand and big figures use the same soft face; hierarchy comes from size, spacing and colour */
+  --font-display: var(--font-ui);
+  --font-num: 'JetBrains Mono', var(--font-bn), ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  /* kept for older rules: the UI face */
+  --font: var(--font-ui);
+  /* weights: Nunito ships 400 / 500 / 600 only */
+  --fw-regular: 400; --fw-medium: 500; --fw-strong: 600;
+  --lh-body: 1.55;
+  --lh-tight: 1.25;
+  --track-head: -0.005em;
+
+  /* control sizing */
+  --h-control: calc(34px * var(--fs-scale));
+  --h-control-lg: calc(44px * var(--fs-scale));
+
+  /* motion (plan 9.2, v1.1.1): durations and curves. Movement distances are tokens too, so Reduced and Off can set
+     them to zero and keep only fades. Only transform and opacity are ever animated. */
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-in-out: cubic-bezier(.65, 0, .35, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --dur-press: 90ms;
+  --dur-quick: 160ms;
+  --dur-base: 240ms;
+  --dur-slow: 420ms;
+  --stagger: 35ms;
+  --move-lift: -2px;     /* hover lift of cards and tiles */
+  --move-press: 2px;     /* a pressed raised button sinks this far */
+  --move-rise: 10px;     /* entry: cards rise into place */
+  --scale-press: .975;
+
+  /* depth (v1.1.1): warm, layered shadows. Resting sits on the page, raised is a hovered card or a primary button,
+     floating is a menu, toast, dock panel or dialog. The inset highlight is the lit top edge. */
+  --sh-color: 15, 23, 42;
+  --hl-top: inset 0 1px 0 rgba(255, 255, 255, .75);
+  --shadow-rest: 0 1px 1px rgba(var(--sh-color), .04), 0 2px 6px -1px rgba(var(--sh-color), .08);
+  --shadow-raised: 0 2px 4px rgba(var(--sh-color), .05), 0 12px 24px -8px rgba(var(--sh-color), .18);
+  --shadow-float: 0 6px 12px rgba(var(--sh-color), .08), 0 24px 48px -12px rgba(var(--sh-color), .30);
+  --shadow-inset: inset 0 1px 2px rgba(var(--sh-color), .09), inset 0 0 0 1px rgba(var(--sh-color), .02);
+  --shadow-sticky: 0 3px 8px -2px rgba(var(--sh-color), .22);
+  /* surfaces: a faint top-lit gradient on cards and controls */
+  --grad-card: linear-gradient(180deg, #FFFFFF 0%, var(--paper) 55%, #F8FAFC 100%);
+  --grad-control: linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%);
+  --grad-primary: linear-gradient(180deg, #1E293B 0%, var(--brand) 55%, #0B1220 100%);
+  --grad-primary-hover: linear-gradient(180deg, #334155 0%, #1E293B 60%, #0F172A 100%);
+  --grad-dark: linear-gradient(180deg, #1E293B 0%, var(--black) 100%);
+  --primary-edge: #020617;
+
+  /* kept names (older rules) */
+  --shadow-pop: var(--shadow-float);
+  --shadow-1: var(--shadow-rest);
+  --shadow-2: var(--shadow-raised);
+  --ring: 0 0 0 3px rgba(20, 184, 166, .35);
+}
+
+html[lang='bn'] {
+  --lh-body: 1.7; --lh-tight: 1.45;
+  --fw-medium: 400; --fw-strong: 400;
+  --track-head: 0.01em;
+  --fs-xs: calc(12.5px * var(--fs-scale));
+  --fs-sm: calc(14px * var(--fs-scale));
+  --fs-md: calc(15.5px * var(--fs-scale));
+  --fs-lg: calc(17px * var(--fs-scale));
+  --fs-xl: calc(21px * var(--fs-scale));
+  --fs-2xl: calc(27px * var(--fs-scale));
+  --fs-3xl: calc(35px * var(--fs-scale));
+  --fs-hero: calc(31px * var(--fs-scale));
+}
+
+html[data-fontsize='large'] { --fs-scale: 1.15; }
+html[data-fontsize='xlarge'] { --fs-scale: 1.3; }
+
+/* High contrast: pure black on paper, thicker lines, no tints doing the work of borders */
+html[data-contrast='high'] {
+  --shadow-1: none; --shadow-2: none; --ring: 0 0 0 3px #000;
+  --shadow-rest: none; --shadow-raised: none; --shadow-float: 0 0 0 2px #000; --shadow-inset: none; --shadow-sticky: none; --hl-top: 0 0 0 transparent;
+  --grad-card: var(--paper); --grad-control: var(--paper); --grad-primary: var(--brand); --grad-primary-hover: var(--brand-dark); --grad-dark: var(--black);
+  --ink: #000; --ink-2: #000; --muted: #2A2A2A;
+  --cream: #FFFFFF; --cream-2: #F2F2F2; --cream-3: #E0E0E0; --paper: #FFFFFF;
+  --line: #000; --line-strong: #000;
+  --red: #B00020; --red-dark: #80001A;
+  --focus: #000;
+}
+
+/* Animations setting: full / reduced / off (v1.1.1). Full: every effect. Reduced: fades only, nothing moves.
+   Off: no transitions or animations at all. prefers-reduced-motion and the Lite guard both map to Reduced
+   (store/ui.ts effectiveMotion). */
+html[data-motion='reduced'] { --dur-quick: 80ms; --dur-base: 120ms; --dur-slow: 140ms; --stagger: 0ms; --move-lift: 0px; --move-press: 0px; --move-rise: 0px; --scale-press: 1; }
+html[data-motion='off'] { --dur-press: 0ms; --dur-quick: 0ms; --dur-base: 0ms; --dur-slow: 0ms; --stagger: 0ms; --move-lift: 0px; --move-press: 0px; --move-rise: 0px; --scale-press: 1; }
+html[data-motion='reduced'] *, html[data-motion='off'] * { scroll-behavior: auto !important; }
+html[data-motion='reduced'] .loop, html[data-motion='off'] .loop { animation: none !important; }
+html[data-motion='off'] *, html[data-motion='off'] *::before, html[data-motion='off'] *::after { animation-duration: 0.001ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+
+/* Lite (a slow GPU, found by the frame-time guard): flat shadows, no gradients or blur; the look stays, the cost goes */
+html[data-lite='1'] {
+  --shadow-rest: 0 1px 0 rgba(var(--sh-color), .10); --shadow-raised: 0 2px 0 rgba(var(--sh-color), .14); --shadow-float: 0 0 0 1px rgba(var(--sh-color), .25), 0 4px 0 rgba(var(--sh-color), .12);
+  --shadow-inset: none; --shadow-sticky: 0 1px 0 rgba(var(--sh-color), .2);
+  --grad-card: var(--paper); --grad-control: var(--paper); --grad-primary: var(--brand); --grad-primary-hover: var(--brand-dark); --grad-dark: var(--black);
+}
