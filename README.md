@@ -69,7 +69,7 @@ build workflows, and it stops at 100 files). You need [Git](https://git-scm.com/
 # unzip PetraDMS.zip into an empty folder, open a terminal in that folder, then:
 git init -b main
 git add .
-git commit -m "PetraDMS 1.2.1"
+git commit -m "PetraDMS 1.2.2"
 git remote add origin https://github.com/<you>/<repo>.git
 git push -u origin main
 ```
@@ -100,11 +100,11 @@ The full run takes a while (tens of minutes). **Windows Installer (quick, no tes
 faster; test that one by hand before giving it to a customer.
 
 **5. Download the `.exe`.** Open the green run, scroll to **Artifacts**, download **PetraDMS-Windows-x64** (from CI or
-Windows Release) or **PetraDMS-Windows-x64-quick**. Unzip it: inside are `PetraDMS-Setup-1.2.1.exe`, `SHA256SUMS.txt`,
+Windows Release) or **PetraDMS-Windows-x64-quick**. Unzip it: inside are `PetraDMS-Setup-1.2.2.exe`, `SHA256SUMS.txt`,
 `VERSION.txt` and `RELEASE-NOTES.md`. Artifacts are kept for 30 days.
 
-**Optional, public download page:** with "Read and write permissions" set, run `git tag v1.2.1 && git push origin v1.2.1`.
-The tag must equal the version in `apps/desktop/package.json`, and `CHANGELOG.md` must have a `## [1.2.1]` section
+**Optional, public download page:** with "Read and write permissions" set, run `git tag v1.2.2 && git push origin v1.2.2`.
+The tag must equal the version in `apps/desktop/package.json`, and `CHANGELOG.md` must have a `## [1.2.2]` section
 (it does). The installer then appears under **Releases**.
 
 ## Repository map

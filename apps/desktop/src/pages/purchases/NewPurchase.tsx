@@ -4,7 +4,7 @@ import { formatBoxPcs, fromBnDigits, type ProductDto, type SupplierProductDto } 
 import { call, errorCode, errorParams, errorText } from '../../api';
 import { useI18n, type I18n } from '../../i18n';
 import { useApp } from '../../store/app';
-import { Button, Card, Checkbox, DateInput, EmptyState, Field, Input, MoneyInput, ProductPicker, QtyInput, Select, Textarea, packLabel, productName, stockText, toast, useQuery } from '../../ui';
+import { Button, Card, Checkbox, DateInput, EmptyState, Field, Input, Modal, MoneyInput, ProductPicker, QtyInput, Select, Textarea, packLabel, productName, stockText, toast, useQuery } from '../../ui';
 import { DiscountInput } from '../pos/DiscountInput';
 import {
   hasQty, makeRow, packOf, rowAmount, rowProblem, rowTouched, stockAfter, summarize, toSaveLines,
@@ -151,6 +151,21 @@ export function NewPurchase({ onDone, onCancel }: { onDone: (saved: { id: number
   const valid = active.length > 0 && problems.length === 0 && summary.calc !== null && date !== null && paidVal <= total && (supplierId !== null || due === 0) && (!dupDoc || dupReason.trim() !== '');
 
   const update = useCallback((key: string, patch: Partial<GridRow>) => setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r))), []);
+  // "+ Set box" on a row: the box is saved on the product, then the row switches to it once the product list reloads
+  const [boxFor, setBoxFor] = useState<{ rowKey: string; product: ProductDto } | null>(null);
+  const [pendingBox, setPendingBox] = useState<{ rowKey: string; packId: number; factor: number } | null>(null);
+  const askBox = useCallback((rowKey: string, product: ProductDto) => setBoxFor({ rowKey, product }), []);
+  useEffect(() => {
+    if (!pendingBox) return;
+    const row = rows.find((r) => r.key === pendingBox.rowKey);
+    const p = row ? byId.get(row.productId) : undefined;
+    if (!row || !p) { setPendingBox(null); return; }
+    if (!p.packs.some((k) => k.id === pendingBox.packId)) return;
+    const old = packOf(p, row.packId);
+    // the typed cost was per piece; it becomes the cost of one box
+    update(row.key, { packId: pendingBox.packId, cost: row.cost === null ? null : Math.round((row.cost * pendingBox.factor) / old.factor) });
+    setPendingBox(null);
+  }, [pendingBox, rows, byId, update]);
   const remove = useCallback((key: string) => setRows((rs) => rs.filter((r) => r.key !== key)), []);
 
   const focusCell = (rowIdx: number, c: number) => {
@@ -354,7 +369,7 @@ export function NewPurchase({ onDone, onCancel }: { onDone: (saved: { id: number
               </tr>
             </thead>
             <tbody>
-              {visible.map(({ r, idx }) => <GridLine key={r.key} row={r} idx={idx} product={byId.get(r.productId)!} i18n={i18n} onChange={update} onRemove={remove} />)}
+              {visible.map(({ r, idx }) => <GridLine key={r.key} row={r} idx={idx} product={byId.get(r.productId)!} i18n={i18n} onChange={update} onRemove={remove} onSetBox={askBox} />)}
             </tbody>
           </table>
         )}
@@ -391,12 +406,13 @@ export function NewPurchase({ onDone, onCancel }: { onDone: (saved: { id: number
         </div>
       </div>
       <AddManyModal open={addMany} products={products} already={new Set(rows.map((r) => r.productId))} onClose={() => setAddMany(false)} onAdd={(ids) => { setAddMany(false); addProducts(ids, false); toast.ok(t('pur.addedMany', { n: ids.length })); }} />
+      <SetBoxModal target={boxFor?.product ?? null} onClose={() => setBoxFor(null)} onSaved={(packId, factor) => { const k = boxFor!.rowKey; setBoxFor(null); setPendingBox({ rowKey: k, packId, factor }); productsQ.reload(); }} />
       <PasteModal open={paste} products={products} onClose={() => setPaste(false)} onAdd={(lines) => { setPaste(false); mergePasted(lines); }} />
     </div>
   );
 }
 
-const GridLine = memo(function GridLine({ row: r, idx, product: p, i18n, onChange, onRemove }: { row: GridRow; idx: number; product: ProductDto; i18n: I18n; onChange: (key: string, patch: Partial<GridRow>) => void; onRemove: (key: string) => void }) {
+const GridLine = memo(function GridLine({ row: r, idx, product: p, i18n, onChange, onRemove, onSetBox }: { row: GridRow; idx: number; product: ProductDto; i18n: I18n; onChange: (key: string, patch: Partial<GridRow>) => void; onRemove: (key: string) => void; onSetBox: (rowKey: string, p: ProductDto) => void }) {
   const { t, money } = i18n;
   const pack = packOf(p, r.packId);
   const boxed = pack.factor > 1;
@@ -412,12 +428,14 @@ const GridLine = memo(function GridLine({ row: r, idx, product: p, i18n, onChang
         <br /><small className="muted">{p.sku} · {t('nav.stock')}: {stockText(i18n, p, p.stockQty)}</small>
       </td>
       <td>
-        <Select aria-label={t('pur.box')} value={r.packId} data-cell={cell('pack')} onChange={(e) => {
+        <Select aria-label={t('pur.box')} value={r.packId} data-cell={cell('pack')} data-testid={`line-pack-${idx}`} onChange={(e) => {
+          if (e.target.value === 'new-box') { onSetBox(r.key, p); return; }
           const np = packOf(p, Number(e.target.value));
           // keep the price per piece when switching between box and pieces
           set({ packId: np.id, cost: r.cost === null ? null : Math.round((r.cost * np.factor) / pack.factor) });
         }}>
           {p.packs.map((k) => <option key={k.id} value={k.id}>{packLabel(i18n, k)}{k.factor > 1 ? ` (${i18n.n(k.factor)})` : ''}</option>)}
+          <option value="new-box">+ {t('pur.setBox')}</option>
         </Select>
       </td>
       <td><QtyInput aria-label={t('pur.boxQty')} value={boxed ? r.box : null} disabled={!boxed} onChange={(v) => set({ box: v })} data-cell={cell('box')} data-testid={`line-box-${idx}`} /></td>
@@ -467,4 +485,50 @@ function PctInput({ value, onChange, cellId, testId, label }: { value: number | 
     return bp <= 10000 ? bp : null;
   }
   return <Input numeric inputMode="decimal" aria-label={label} value={text} placeholder="0" invalid={text.trim() !== '' && parse(text) === null} data-cell={cellId} data-testid={testId} onChange={(e) => { setText(e.target.value); onChange(parse(e.target.value)); }} />;
+}
+
+/** "+ Set box" from a purchase row: how many pieces are in one box (and optional box prices), saved on the product. */
+function SetBoxModal({ target, onClose, onSaved }: { target: ProductDto | null; onClose: () => void; onSaved: (packId: number, factor: number) => void }) {
+  const i18n = useI18n();
+  const { t } = i18n;
+  const [factor, setFactor] = useState<number | null>(null);
+  const [retail, setRetail] = useState<number | null>(null);
+  const [wholesale, setWholesale] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => { if (target) { setFactor(null); setRetail(null); setWholesale(null); setError(null); } }, [target]);
+  const unit = target?.baseUnit || 'pcs';
+  const ok = factor !== null && factor >= 2;
+  const save = async () => {
+    if (!target || !ok) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const hasBox = target.packs.some((k) => k.name.toLowerCase() === 'box');
+      const r = await call('catalog:addBox', { productId: target.id, factor: factor!, name: hasBox ? `Box ${factor}` : 'Box', nameBn: hasBox ? `বক্স ${factor}` : 'বক্স', priceRetail: retail, priceWholesale: wholesale });
+      toast.ok(t('toast.saved'));
+      onSaved(r.packId, factor!);
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const auto = (per: number | null) => (ok && per !== null ? t('prod.boxPriceHint', { price: i18n.money(factor! * per), qty: i18n.n(factor!), unit }) : undefined);
+  return (
+    <Modal open={target !== null} title={target ? `${t('pur.setBox')}: ${productName(i18n.lang, target)}` : ''} onClose={onClose}
+      footer={<><Button onClick={onClose}>{t('act.cancel')}</Button><Button variant="primary" disabled={!ok || busy} onClick={() => void save()} data-testid="setbox-save">{t('act.save')}</Button></>}>
+      <div className="grid" style={{ gap: 12 }} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void save(); } }}>
+        <Field label={t('prod.pcsPerBox', { unit })} required hint={ok ? t('prod.packEquals', { pack: i18n.lang === 'bn' ? 'বক্স' : 'Box', qty: i18n.n(factor!), unit }) : undefined}>
+          {(a) => <QtyInput id={a.id} aria-describedby={a.describedBy} value={factor} onChange={setFactor} data-autofocus data-testid="setbox-factor" />}
+        </Field>
+        <div className="form-grid">
+          <Field label={t('prod.boxRetail')} hint={auto(target?.priceRetail ?? null)}>{(a) => <MoneyInput id={a.id} aria-describedby={a.describedBy} value={retail} onChange={setRetail} />}</Field>
+          <Field label={t('prod.boxWholesale')} hint={auto(target?.priceWholesale ?? null)}>{(a) => <MoneyInput id={a.id} aria-describedby={a.describedBy} value={wholesale} onChange={setWholesale} />}</Field>
+        </div>
+        <p className="muted" style={{ margin: 0 }}>{t('pur.setBoxHelp')}</p>
+        {error && <div className="p-error" role="alert">{error}</div>}
+      </div>
+    </Modal>
+  );
 }

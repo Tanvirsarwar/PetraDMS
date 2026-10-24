@@ -278,5 +278,7 @@
   "prod.rename": "Rename",
   "prod.renameLookup": "Rename",
   "prod.noCategories": "No categories yet",
-  "prod.noBrands": "No brands yet"
+  "prod.noBrands": "No brands yet",
+  "pur.setBox": "Set box…",
+  "pur.setBoxHelp": "The box is saved on the product, so sales, stock and the next purchase use it too. Stock stays counted in pieces."
 }

@@ -1,7 +1,7 @@
 {
   "name": "@petra/desktop",
   "productName": "PetraDMS",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "private": true,
   "description": "PetraDMS - offline distribution management for FMCG distributors",
   "author": "Petra",

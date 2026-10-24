@@ -1,5 +1,5 @@
 import type { Dispatcher } from './dispatcher';
-import { archiveProduct, listLookups, listMoneyAccounts, listProducts, listSuppliers, partyLedger, saveLookup, saveProduct, saveSupplier } from './catalog';
+import { archiveProduct, listLookups, listMoneyAccounts, listProducts, listSuppliers, partyLedger, saveLookup, addBox, saveProduct, saveSupplier } from './catalog';
 import { assertManager, getPurchase, listAdjustments, listBatches, listPurchases, stockAlerts, stockMovements } from './inbound';
 import { currentBusinessDate } from './coreServices';
 import { archiveProducts, deleteProducts, previewProductsDelete } from '../productsBulk';
@@ -14,6 +14,7 @@ import { applyPrices, checkInvoiceRef, clearPurchaseDraft, linkSelection, listSu
 export function registerCatalogServices(d: Dispatcher): void {
   d.register('catalog:products', ({ ctx, session, input }) => listProducts(ctx, session!.role, input.includeArchived));
   d.register('catalog:productSave', ({ ctx, input }) => ({ id: saveProduct(ctx, input) }));
+  d.register('catalog:addBox', ({ ctx, input }) => ({ packId: addBox(ctx, input) }));
   d.register('catalog:productArchive', ({ ctx, input }) => {
     archiveProduct(ctx, input.id, input.archived);
     return null;

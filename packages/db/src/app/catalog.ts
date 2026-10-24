@@ -71,6 +71,22 @@ function checkPrices(i: ProductSave): void {
   if (i.minPrice > i.priceRetail && i.priceRetail > 0) throw new PetraError('INVALID_INPUT', 'minimum price is above the retail price', { field: 'minPrice' });
 }
 
+/**
+ * One new box size for a product (the purchase screen's "+ Set box"). The same name or size twice is refused;
+ * a product with no default box yet gets this one as its default sale and purchase unit.
+ */
+export function addBox(ctx: Ctx, i: { productId: number; factor: number; name: string; nameBn: string; priceRetail: number | null; priceWholesale: number | null }): number {
+  return tx(ctx, () => {
+    requireRow(get<{ id: number }>(ctx.db, 'SELECT id FROM products WHERE id = ?', i.productId), 'product', i.productId);
+    if (get(ctx.db, 'SELECT 1 AS x FROM product_packs WHERE product_id = ? AND factor = ?', i.productId, i.factor)) throw new PetraError('DUPLICATE', 'pack size repeated', { what: 'pack size' });
+    const sort = get<{ n: number }>(ctx.db, 'SELECT COALESCE(MAX(sort), 0) + 1 AS n FROM product_packs WHERE product_id = ?', i.productId)?.n ?? 1;
+    const packId = unique(() => run(ctx.db, 'INSERT INTO product_packs(product_id, name, name_bn, factor, price_retail, price_wholesale, price_dealer, sort) VALUES(?,?,?,?,?,?,NULL,?)', i.productId, i.name, i.nameBn, i.factor, i.priceRetail, i.priceWholesale, sort).id, 'pack');
+    run(ctx.db, 'UPDATE products SET default_sale_pack_id = COALESCE(default_sale_pack_id, ?), default_purchase_pack_id = COALESCE(default_purchase_pack_id, ?), updated_at = ? WHERE id = ?', packId, packId, ctx.now(), i.productId);
+    audit(ctx, { action: 'product.add_box', entity: 'product', entityId: i.productId, after: { name: i.name, factor: i.factor } });
+    return packId;
+  });
+}
+
 export function saveProduct(ctx: Ctx, i: ProductSave): number {
   checkPrices(i);
   const names = new Set<string>([i.baseUnit.toLowerCase()]);

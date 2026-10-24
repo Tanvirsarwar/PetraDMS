@@ -408,6 +408,18 @@ const bulkIds = z.array(z.number().int().positive()).min(1).max(BULK_PRODUCT_MAX
 export const catalogChannels = {
   'catalog:products': ch<ProductDto[]>()(z.object({ includeArchived: z.boolean().default(false) })),
   'catalog:productSave': ch<{ id: number }>()(productSaveInput, { access: 'manager', write: true }),
+  /** Adds one box size to a product from the purchase screen, without resending the whole product. */
+  'catalog:addBox': ch<{ packId: number }>()(
+    z.object({
+      productId: z.number().int().positive(),
+      factor: z.number().int().min(2).max(100_000),
+      name: z.string().trim().min(1).max(40).default('Box'),
+      nameBn: z.string().trim().max(40).default('বক্স'),
+      priceRetail: z.number().int().min(0).nullable().default(null),
+      priceWholesale: z.number().int().min(0).nullable().default(null)
+    }),
+    { access: 'manager', write: true }
+  ),
   'catalog:productArchive': ch()(z.object({ id: z.number().int().positive(), archived: z.boolean() }), { access: 'manager', write: true }),
   'catalog:productsArchive': ch<{ changed: number; skipped: number }>()(z.object({ ids: bulkIds, archived: z.boolean() }), { access: 'manager', write: true }),
   'catalog:productsDeletePreview': ch<ProductsDeletePreview>()(z.object({ ids: bulkIds }), { access: 'manager' }),

@@ -121,3 +121,38 @@ test('sale screen: "+ Add customer" saves a full customer and puts it on the sal
   await app.close();
   expect(integrity(dataDir)).toBe('');
 });
+
+test('purchase: "+ Set box" on a row saves the box on the product and the row switches to boxes', async () => {
+  const { app, page, dataDir, consoleErrors } = await launch();
+  await completeSetup(page, { lang: 'en' });
+  await inv(page, 'catalog:productSave', { sku: 'AMA-MP-1KG', name: 'Ama Milk Powder 1 kg', baseUnit: 'pcs', priceRetail: 90_000, priceWholesale: 85_000, priceDealer: 85_000, minPrice: 0, packs: [], barcodes: [] });
+  await navTo(page, 'Purchases');
+  await page.getByTestId('new-purchase').click();
+  const rows = page.getByTestId('purchase-lines').locator('tbody tr');
+  if ((await rows.count()) === 0) {
+    await page.getByPlaceholder('Type name, SKU or scan').fill('AMA-MP-1KG');
+    await page.getByPlaceholder('Type name, SKU or scan').press('Enter');
+  }
+  await expect(page.getByTestId('line-box-0')).toBeDisabled();
+  await page.getByTestId('line-cost-0').fill('700');
+  await page.getByTestId('line-pack-0').selectOption('new-box');
+  await page.getByTestId('setbox-factor').fill('12');
+  await expect(page.getByText('1 Box = 12 pcs')).toBeVisible();
+  await page.getByTestId('setbox-save').click();
+
+  // the row is now in boxes, and the cost per piece became the cost per box
+  await expect(page.getByTestId('line-box-0')).toBeEnabled();
+  await expect(page.getByTestId('line-cost-0')).toHaveValue('8400');
+  await page.getByTestId('line-box-0').fill('2');
+  // a cash purchase (no company) is paid in full, as the screen fills in
+  await expect(page.getByTestId('purchase-save')).toBeEnabled();
+  await page.getByTestId('purchase-save').click();
+  await expect(page.getByTestId('purchase-saved')).toBeVisible();
+  const p = (await inv<{ sku: string; stockQty: number; packs: { factor: number; id: number }[]; defaultSalePackId: number | null }[]>(page, 'catalog:products', { includeArchived: false })).find((x) => x.sku === 'AMA-MP-1KG')!;
+  expect(p.stockQty).toBe(24);
+  expect(p.defaultSalePackId).toBe(p.packs.find((k) => k.factor === 12)!.id);
+
+  expect(consoleErrors).toEqual([]);
+  await app.close();
+  expect(integrity(dataDir)).toBe('');
+});

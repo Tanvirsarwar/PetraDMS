@@ -196,3 +196,23 @@ describe('catalog and inbound services', () => {
     app.close();
   });
 });
+
+describe('add a box from the purchase screen', () => {
+  it('adds the size once, makes it the default when there was none, and refuses a repeated size', async () => {
+    const { makeApp: mk, ok: okk, fail: failk, setupWithUsers: setup } = await import('./testApp');
+    const app = mk();
+    await setup(app.d);
+    const r = await okk(app.d, 'catalog:productSave', { sku: 'P1', name: 'Powder', baseUnit: 'pcs', priceRetail: 100, priceWholesale: 90, priceDealer: 90, minPrice: 0, packs: [], barcodes: [] });
+    const b = await okk(app.d, 'catalog:addBox', { productId: r.id, factor: 12, priceRetail: 1_100 });
+    const p = (await okk(app.d, 'catalog:products', { includeArchived: false }))[0]!;
+    expect(p.packs.find((k) => k.id === b.packId)).toMatchObject({ name: 'Box', nameBn: 'বক্স', factor: 12, priceRetail: 1_100, priceWholesale: null });
+    expect(p.defaultSalePackId).toBe(b.packId);
+    expect(p.defaultPurchasePackId).toBe(b.packId);
+    expect(await failk(app.d, 'catalog:addBox', { productId: r.id, factor: 12, name: 'Carton' })).toBe('DUPLICATE');
+    expect(await failk(app.d, 'catalog:addBox', { productId: r.id, factor: 1 })).toBe('INVALID_INPUT');
+    // a second size keeps the first as the default
+    await okk(app.d, 'catalog:addBox', { productId: r.id, factor: 24, name: 'Box 24' });
+    expect((await okk(app.d, 'catalog:products', { includeArchived: false }))[0]!.defaultSalePackId).toBe(b.packId);
+    app.close();
+  });
+});

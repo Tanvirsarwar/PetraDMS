@@ -3,6 +3,11 @@
 All notable changes to PetraDMS. The newest version is first. The installer's release notes are taken from the section
 for its version, so every release needs a section here.
 
+## [1.2.2] - 2026-10-25
+
+### Added
+- **Set a box straight from a purchase.** Each purchase row's unit list has **+ Set box…**: type how many pieces are in one box (and, if you like, the box retail and wholesale price). The box is saved on the product, the row switches to boxes, and a cost already typed per piece becomes the cost of one box. A product with no default unit yet gets this box as its default for selling and buying. Rows added with **Add many products** have the same choice. Managers and the owner only; no database migration.
+
 ## [1.2.1] - 2026-10-25
 
 Easier box + pieces, a way to start fresh, panels that fit every screen, a categories and brands list, and adding a customer from the sale screen. No database migration: every product, stock figure, invoice, due and payment opens unchanged.
