@@ -22,6 +22,8 @@ export interface PasteRow {
   /** Cost per box in poisha; null when the column is not mapped or the cell is empty. */
   cost: number | null;
   problems: PasteProblem[];
+  /** Not an invoice line (a total, a blank or a note row): no product and no quantity. Shown, skipped by default. */
+  ignored: boolean;
 }
 
 export interface MatchableProduct {
@@ -34,36 +36,46 @@ export interface MatchableProduct {
 
 const ALIASES: Record<PasteField, string[]> = {
   product: ['sku', 'code', 'product code', 'item code', 'product', 'item', 'name', 'description', 'particulars', 'পণ্য', 'নাম', 'কোড'],
-  box: ['box', 'boxes', 'ctn', 'carton', 'cartons', 'case', 'cases', 'বক্স', 'কার্টন'],
-  pcs: ['pcs', 'pc', 'piece', 'pieces', 'loose', 'unit', 'units', 'পিস'],
-  cost: ['cost', 'rate', 'price', 'tp', 'trade price', 'cost per box', 'box rate', 'দর', 'দাম', 'রেট']
+  box: ['box', 'boxes', 'ctn', 'carton', 'cartons', 'case', 'cases', 'ctn qty', 'carton qty', 'box qty', 'বক্স', 'কার্টন'],
+  pcs: ['pcs', 'pc', 'piece', 'pieces', 'loose', 'unit', 'units', 'pcs qty', 'loose qty', 'পিস'],
+  cost: ['cost', 'rate', 'price', 'tp', 'trade price', 'cost per box', 'box rate', 'tp/ctn', 'tp per ctn', 'rate/ctn', 'price/ctn', 'tp/box', 'rate/box', 'price/box', 'দর', 'দাম', 'রেট']
 };
 
 const norm = (s: string): string => asciiDigits(s).trim().toLowerCase().replace(/\s+/g, ' ');
+/** A heading cell: "TP / CTN" and "tp/ctn" are the same, "Rate (Tk)" reads as "rate". */
+const normHead = (s: string): string => norm(s).replace(/\s*\/\s*/g, '/').replace(/\s*\((tk|taka|৳|bdt)\)$/, '').replace(/[:.]$/, '');
 
 /** Splits pasted text into cells (tab from Excel, else comma or semicolon). */
 export function pasteCells(text: string): string[][] {
-  return parseCsv(text).rows.map((r) => r.map((c) => c.trim())).filter((r) => r.some((c) => c !== ''));
+  // Excel and Google Sheets copy cells separated by tabs. A sheet that starts with a title line ("Shapla Foods, Sylhet")
+  // has no tab on its first line, so a tab anywhere means tabs, whatever the first line says.
+  return parseCsv(text, /\t/.test(text) ? '\t' : undefined).rows.map((r) => r.map((c) => c.trim())).filter((r) => r.some((c) => c !== ''));
 }
 
 /** Finds a heading row and maps it; without headings guesses product, box, pcs, cost from left to right. */
-export function guessPasteMapping(rows: string[][]): { mapping: PasteMapping; hasHeader: boolean } {
-  const first = rows[0] ?? [];
-  const mapping: PasteMapping = { product: null, box: null, pcs: null, cost: null };
-  let hits = 0;
-  first.forEach((cell, i) => {
-    const c = norm(cell);
-    for (const f of PASTE_FIELDS) {
-      if (mapping[f] === null && ALIASES[f].includes(c)) {
-        mapping[f] = i;
-        hits++;
-        break;
+export function guessPasteMapping(rows: string[][]): { mapping: PasteMapping; hasHeader: boolean; start: number } {
+  // A company's sheet often starts with its name, the invoice number and a blank line: the heading row is the row,
+  // among the first ten, that names the most columns. Everything above it is not part of the table.
+  let best = { at: -1, hits: 0, mapping: { product: null, box: null, pcs: null, cost: null } as PasteMapping };
+  rows.slice(0, 10).forEach((row, at) => {
+    const mapping: PasteMapping = { product: null, box: null, pcs: null, cost: null };
+    let hits = 0;
+    row.forEach((cell, i) => {
+      const c = normHead(cell);
+      for (const f of PASTE_FIELDS) {
+        if (mapping[f] === null && ALIASES[f].includes(c)) {
+          mapping[f] = i;
+          hits++;
+          break;
+        }
       }
-    }
+    });
+    // the first row counts with one heading (the old rule); a later row needs two, so a lone word in a title does not win
+    if (hits > best.hits && (at === 0 || hits >= 2)) best = { at, hits, mapping };
   });
-  if (hits > 0) return { mapping, hasHeader: true };
-  const n = first.length;
-  return { mapping: { product: n > 0 ? 0 : null, box: n > 1 ? 1 : null, pcs: n > 2 ? 2 : null, cost: n > 3 ? 3 : null }, hasHeader: false };
+  if (best.at >= 0) return { mapping: best.mapping, hasHeader: true, start: best.at };
+  const n = rows[0]?.length ?? 0;
+  return { mapping: { product: n > 0 ? 0 : null, box: n > 1 ? 1 : null, pcs: n > 2 ? 2 : null, cost: n > 3 ? 3 : null }, hasHeader: false, start: 0 };
 }
 
 /** SKU (any case), then barcode, then exact English or Bangla name (any case, extra spaces ignored). */
@@ -88,9 +100,13 @@ export function makeProductMatcher(products: MatchableProduct[]): (text: string)
   };
 }
 
-export function readPasteRows(rows: string[][], mapping: PasteMapping, hasHeader: boolean, match: (text: string) => number | null): PasteRow[] {
+const TOTAL_WORDS = /^(sub ?total|grand total|total|net total|net|vat|discount|less|মোট|সর্বমোট|ছাড়)\b/i;
+
+/** `start` is the first row of the table (the heading row when `hasHeader`); rows above it are not read. */
+export function readPasteRows(rows: string[][], mapping: PasteMapping, hasHeader: boolean, match: (text: string) => number | null, start = 0): PasteRow[] {
   const cell = (r: string[], f: PasteField): string => (mapping[f] === null ? '' : (r[mapping[f] as number] ?? '').trim());
-  return rows.slice(hasHeader ? 1 : 0).map((r, i) => {
+  const first = start + (hasHeader ? 1 : 0);
+  return rows.slice(first).map((r, i) => {
     const problems: PasteProblem[] = [];
     const productText = cell(r, 'product');
     const productId = match(productText);
@@ -115,6 +131,9 @@ export function readPasteRows(rows: string[][], mapping: PasteMapping, hasHeader
       else cost = c;
     }
     if (box + pcs === 0 && !problems.includes('badBox') && !problems.includes('badPcs')) problems.push('noQty');
-    return { line: i + 1 + (hasHeader ? 1 : 0), cells: r, productText, productId, box, pcs, cost, problems };
+    // a total or note row: no product and no quantity, or a row that starts with "Total" and matches no product
+    const anyText = r.find((c) => c.trim() !== '')?.trim() ?? '';
+    const ignored = productId === null && ((cell(r, 'box') === '' && cell(r, 'pcs') === '') || TOTAL_WORDS.test(anyText) || TOTAL_WORDS.test(productText));
+    return { line: first + i + 1, cells: r, productText, productId, box, pcs, cost, problems, ignored };
   });
 }

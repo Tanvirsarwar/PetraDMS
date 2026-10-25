@@ -3,6 +3,16 @@
 All notable changes to PetraDMS. The newest version is first. The installer's release notes are taken from the section
 for its version, so every release needs a section here.
 
+## [1.2.3] - 2026-10-25
+
+### Fixed
+- **Paste from Excel reads a whole company invoice sheet.** A sheet that starts with the company's name, the invoice number or a blank line was read as comma-separated (the title line has no tab), so every column landed one place off and all rows showed "Box is not a whole number". Pasted cells are now split on tabs whenever there is a tab, the heading row is found among the first ten rows (rows above it are left out, and the screen says how many), headings like `TP / CTN`, `TP/CTN`, `CTN QTY` and `Rate (Tk)` are understood, and "Total", "VAT", blank and note rows are skipped automatically (shown, and can be un-skipped).
+- **The "take the tour" bar was an empty dark strip.** Its text and buttons were navy on navy, so new users saw a blank bar under the demo banner and could not dismiss it. It is now navy with white text, a teal Start button and an outlined Not now.
+- **Stock and money figures no longer break over two lines** in tables ("99 / pcs").
+
+### Changed
+- A gold marker glides to the chosen page in the side menu, and the sale total gives a short pulse when it changes, so the cashier sees the new amount. Both follow the Animations setting (Reduced and Off: no movement).
+
 ## [1.2.2] - 2026-10-25
 
 ### Added

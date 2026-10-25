@@ -391,7 +391,7 @@ export function Pos({ edit, onEditDone }: { edit?: SaleDetail | null; onEditDone
               {totals.discount > 0 && <div className="row"><span className="muted">{t('word.discount')}</span><span className="num">−{money(totals.discount, { fixed: true })}</span></div>}
               {totals.tax > 0 && <div className="row"><span>{t('word.tax')}</span><span className="num">{money(totals.tax, { fixed: true })}</span></div>}
               {totals.roundOff !== 0 && <div className="row"><span>{t('word.roundOff')}</span><span className="num">{money(totals.roundOff, { fixed: true })}</span></div>}
-              <div className="row grand"><span>{t('word.total')}</span><span className="num" data-testid="pos-total">{money(total, { fixed: true })}</span></div>
+              <div className="row grand"><span>{t('word.total')}</span><span key={total} className={`num${total > 0 ? ' pulse-once' : ''}`} data-testid="pos-total">{money(total, { fixed: true })}</span></div>
               <div className="row">
                 <span>{t('word.paid')} (F8)</span>
                 <div style={{ width: 150 }}>

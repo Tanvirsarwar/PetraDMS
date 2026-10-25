@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Button, Badge, ChangeSecretModal, ErrorBoundary, Modal, ProductFooter, Segmented, Toasts, TraderBrand, useTraderName } from '../ui';
 import { VENDOR } from '@petra/core';
@@ -50,7 +50,7 @@ function TourInvite({ onStart, onDismiss }: { onStart: () => void; onDismiss: ()
   return (
     <div className="banner tour-invite" role="status" data-testid="tour-invite">
       <span style={{ flex: 1 }}>{t('tour.invite')}</span>
-      <Button size="sm" onClick={onStart} data-testid="tour-invite-start">{t('tour.start')}</Button>
+      <Button size="sm" variant="primary" className="tour-go" onClick={onStart} data-testid="tour-invite-start">{t('tour.start')}</Button>
       <Button size="sm" onClick={onDismiss} data-testid="tour-invite-dismiss">{t('tour.notNow')}</Button>
     </div>
   );
@@ -85,6 +85,18 @@ export function Shell() {
   const recovery = useApp((s) => s.status?.recovery);
   const demo = useApp((s) => s.status?.demo);
   const [touring, setTouring] = useState(false);
+  // the gold marker follows the active menu item (measured after each route change and on resize)
+  const navRef = useRef<HTMLElement>(null);
+  const [marker, setMarker] = useState<{ top: number; height: number } | null>(null);
+  useLayoutEffect(() => {
+    const measure = () => {
+      const a = navRef.current?.querySelector<HTMLElement>('a.active');
+      setMarker(a ? { top: a.offsetTop + 8, height: Math.max(0, a.offsetHeight - 16) } : null);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [loc.pathname, mode, lang]);
   const [inviteGone, setInviteGone] = useState(false);
   const showInvite = !!session && !inviteGone && !touring && !tourSeen(session.userId);
   const endTour = (finished: boolean) => {
@@ -129,7 +141,8 @@ export function Shell() {
         <div className="brand">
           <TraderBrand />
         </div>
-        <nav className="nav" aria-label="Main">
+        <nav ref={navRef} className={`nav${marker ? ' has-marker' : ''}`} aria-label="Main">
+          {marker && <span className="nav-marker" aria-hidden="true" style={{ transform: `translateY(${marker.top}px)`, height: marker.height }} />}
           {nav.map((n) => (
             <NavLink key={n.id} to={n.path} end={n.path === '/'} className={({ isActive }) => (isActive ? 'active' : '')}>
               <n.Icon />

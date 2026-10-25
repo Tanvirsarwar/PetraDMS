@@ -32,9 +32,10 @@ export interface ParsedCsv {
 }
 
 /** RFC 4180 reader: quoted fields, doubled quotes, CRLF / LF / CR, a leading byte-order mark, comma / semicolon / tab. Blank lines are dropped. */
-export function parseCsv(input: string): ParsedCsv {
+/** `delimiter` forces the separator; by default it is read from the first line. */
+export function parseCsv(input: string, delimiter?: ',' | ';' | '\t'): ParsedCsv {
   const text = input.charCodeAt(0) === 0xfeff ? input.slice(1) : input;
-  const delimiter = detectDelimiter(text);
+  delimiter ??= detectDelimiter(text) as ',' | ';' | '\t';
   const rows: string[][] = [];
   let row: string[] = [];
   let field = '';

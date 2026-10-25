@@ -24,7 +24,9 @@ export function PasteModal({ open, products, onClose, onAdd }: { open: boolean; 
   const guess = useMemo(() => guessPasteMapping(cells), [cells]);
   const m = mapping ?? guess.mapping;
   const header = hasHeader ?? guess.hasHeader;
-  const parsed = useMemo(() => readPasteRows(cells, m, header, match), [cells, m, header, match]);
+  // rows above the heading row (the company's name, invoice number, a blank line) are not part of the table
+  const start = guess.hasHeader ? guess.start : 0;
+  const parsed = useMemo(() => readPasteRows(cells, m, header, match, start), [cells, m, header, match, start]);
   const width = cells.reduce((a, r) => Math.max(a, r.length), 0);
 
   const rows = parsed.map((r) => {
@@ -39,13 +41,13 @@ export function PasteModal({ open, products, onClose, onAdd }: { open: boolean; 
     if (pcs === null) problems.push('badPcs');
     if (cost === undefined) problems.push('badCost');
     if (box !== null && pcs !== null && box + pcs === 0) problems.push('noQty');
-    return { raw: r, productId, box, pcs, cost, skip: f.skip === true, problems };
+    return { raw: r, productId, box, pcs, cost, skip: f.skip ?? r.ignored, problems };
   });
   const ready = rows.filter((r) => !r.skip && r.problems.length === 0);
   const blocked = rows.filter((r) => !r.skip && r.problems.length > 0);
   const fix = (line: number, patch: Fix) => setFixes((x) => ({ ...x, [line]: { ...x[line], ...patch } }));
   const reset = () => { setText(''); setMapping(null); setHasHeader(null); setFixes({}); };
-  const colName = (i: number) => `${t('pur.column')} ${i18n.n(i + 1)}${header && cells[0]?.[i] ? `: ${cells[0][i]}` : ''}`;
+  const colName = (i: number) => `${t('pur.column')} ${i18n.n(i + 1)}${header && cells[start]?.[i] ? `: ${cells[start][i]}` : ''}`;
 
   return (
     <Modal open={open} wide title={t('pur.paste')} onClose={() => { reset(); onClose(); }}
@@ -69,6 +71,7 @@ export function PasteModal({ open, products, onClose, onAdd }: { open: boolean; 
               ))}
               <div style={{ alignSelf: 'end' }}><Checkbox label={t('pur.firstRowHeader')} checked={header} onChange={(e) => setHasHeader(e.target.checked)} /></div>
             </div>
+            {start > 0 && <p className="muted" style={{ margin: 0 }} data-testid="paste-above">{t('pur.pasteAbove', { n: i18n.n(start) })}</p>}
             <div className="pur-paste-wrap">
               <table className="lines" data-testid="paste-rows">
                 <thead><tr><th className="right" style={{ width: 40 }}>#</th><th>{t('pur.pasteField.product')}</th><th style={{ width: 80 }}>{t('pur.boxQty')}</th><th style={{ width: 80 }}>{t('pur.pcsQty')}</th><th style={{ width: 120 }}>{t('pur.costPerBox')}</th><th>{t('pur.pasteProblem')}</th><th style={{ width: 80 }}>{t('pur.skip')}</th></tr></thead>
